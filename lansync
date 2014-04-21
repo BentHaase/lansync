@@ -1,0 +1,109 @@
+#!/bin/bash
+
+#This script uses rsync to sync two computers
+#that are connected to the same lan network.
+
+#written by Bent Haase
+
+#version number X.XXA --> alpha X.XXB --> beta and time of update
+version="0.01\e[32mA\e[39m"
+updated="2014-04-21"
+
+#--------------------------------------------
+#initialization of variables
+ip=""
+user=""
+port=""
+backup_path=""
+local_path=""
+#--------------------------------------------
+#declaration of functions
+
+#sync files from local computer to remote computer with options -avzuPe and remove delted files
+local_remote(){
+	echo -e "\e[93mlocal \e[36m-->\e[93m remote\e[39m" #output direction (local --> remote)
+	rsync -avzuPe 'ssh -p'"$port"'' "$local_path" "$user"@"$ip":"$backup_path"
+	#get rsync exit code
+	succes+=$?	
+}
+
+remote_local(){
+	echo -e "\e[93m\e[5mremote \e[36m-->\e[93m local\e[0m" #output direction (remote --> local)
+	#sync files from remote computer to local computer with options -avzuPe and remove delted files
+	rsync -avzuPe 'ssh -p'"$port"'' "$user"@"$ip":"$backup_path" "$local_path"
+	#get rsync exit code
+	succes+=$? 
+}
+
+exit_check(){
+	#check exit codes and echo if "-l, --local-remote" or "-r, --remote-local" was succesful or failed
+if [[ $1 = "--local-remote" || $1 = "--remote-local" || $1 = "-l" || $1 = "-r" ]] ;
+	then
+		if [[ $succes = "0" ]] ;
+		then
+			echo -e "\e[32mSync successful!\e[0m"
+		else
+			echo -e "\e[91mSync failed!\e[0m"
+		fi
+else
+	#check exit codes and echo if "-s, --sync" was succesful or failed
+	if [[ $1 = "--sync" || $1 = "-s" ]] ;
+		then
+		if [[ $succes = "00" ]] ;
+		then
+			echo -e "\e[32mSync successful!\e[0m"
+		else
+			echo -e "\e[91mSync failed!\e[0m"
+		fi
+	fi
+fi
+}
+#--------------------------------------------
+
+#check for input parameters and call apropriate functions
+case "$1" in
+	"-c")
+
+		;;
+
+	"--local-remote"|"-l")
+ 		echo -e "\e[32mConnecting, please wait...\e[39m" #output status information
+		local_remote; #sync local files to remote directory
+		echo "....................................................."
+		#call function to check exit codes
+		exit_check $1 $succes;
+		;;
+	"--remote-local"|"-r")	
+		echo -e "\e[32mConnecting, please wait...\e[39m" #output status information
+		echo "" #output blank line
+		remote_local; #sync remote files to local directory
+		echo "....................................................."
+		#call function to check exit codes
+		exit_check $1 $succes;
+		;;
+	"--sync"|"-s")
+ 		echo -e "\e[32mConnecting, please wait...\e[39m" #output status information
+		local_remote; #sync local files to remote directory
+		echo "" #output blank line
+		remote_local; #sync remote files to local directory
+		echo "....................................................."
+		#call function to check exit codes
+		exit_check $1 $succes;
+		;;
+	"--help"|"-h") #print help menu to console
+		echo -e 'call: lansync [OPTION]\n'
+		echo -e '-c, --configure		configure host ip, local- and remote directory\n'
+		echo -e '-l, --local-remote		sync local files to remote directory\n ' 
+		echo -e '-r, --remote-local		sync remote files to local directory\n'
+		echo -e '-s, --sync			bidirectional sync of local- and remote directory\n'
+		echo -e '    --version			get version and quit'
+		;;
+	"--version") #print version
+		echo -e "lansync $version ($updated)\nwritten by Bent Haase"
+		;;
+	*) #default case
+		echo "I don't know what to do..."
+		echo '"lansync --help" to get more information' 
+		;;
+esac
+
